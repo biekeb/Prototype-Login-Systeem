@@ -66,7 +66,18 @@ app.post("/register", async (req,res) =>{
 
     try{
         await client.connect();
+        const collection = client.db('expertlab2').collection('login');
 
+        // Check if the email is already in use
+        const existingUser = await collection.findOne({ email: req.body.email });
+        if (existingUser) {
+            return res.status(409).send({
+                status: "error",
+                message: "Email already in use"
+            });
+        }
+
+        //create new user
         const user = {
         username: req.body.username,
         email: req.body.email,
@@ -75,8 +86,7 @@ app.post("/register", async (req,res) =>{
         uuid: uuidv4()
 
     }
-
-        const collection = client.db('expertlab2').collection('login');
+    //add new user
         const insertedUsers = await collection.insertOne(user);
 
         res.status(201).send({
@@ -126,7 +136,8 @@ app.post("/login", async (req,res) =>{
                 res.send({
                     status: "ok",
                     message: "User logged in successfully",
-                    token: token
+                    token: token,
+                    role: user.role
 
                 })
             }else{
@@ -139,8 +150,14 @@ app.post("/login", async (req,res) =>{
             } 
 
     }
-    catch(err){
-        console.log(err)
+
+    catch (err) {
+        console.error(err);
+        res.status(500).send({
+            status: "error",
+            message: "Internal server error",
+            error: err.message
+        });
     }finally{
         await client.close()
     }
